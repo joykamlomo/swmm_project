@@ -13,3 +13,4 @@ __pycache__/
 *.bak
 *.tmp
 *.pdf
+dataset/Examples
