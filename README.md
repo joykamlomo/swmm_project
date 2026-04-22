@@ -4,69 +4,63 @@ This project helps you find the best places to put water quality sensors in a se
 
 ---
 
-# 1. Setup (Do this first)
+## ⚡ 1. The "Master Control" (Important!)
 
-If you haven't set up the software yet, run these commands in your terminal:
+Before you do anything, you need to decide which network you are analyzing. All settings are kept in one file: **`config/default.yaml`**.
+
+1.  **Open `config/default.yaml`** in your text editor.
+2.  **Check the `model_path`**: This is the file the AI will look at.
+    - Set it to `./dataset/Examples/Example9_event.inp` for a real analysis.
+    - Set it to `./dataset/Examples/Example8.inp` for a quick test.
+3.  **Check `n_scenarios`**: This is how many tests the AI will run.
+    - 5000 is best for real accuracy.
+    - 100 is best for a fast trial.
+
+---
+
+## 🛠️ 2. Setup (Do this once)
+
+Run these commands to prepare your workspace:
 
 ```bash
 # 1. Prepare the workspace
 python -m venv venv
 
 # 2. Activate the environment
-# For Windows (PowerShell):
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser # Only need to do this once
-.\venv\Scripts\activate
-
-# For Mac/Linux:
-source venv/bin/activate
+# Windows: Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser (Run once)
+#          .\venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
 
 # 3. Install the tools
 pip install -r requirements.txt
 ```
 
-> [!TIP]
-> **Windows Error?** If you see an error about "scripts is disabled on this system," run the `Set-ExecutionPolicy` command shown above and try again.
+---
+
+### 🚀 3. Running the Analysis
+
+You can run the entire process (generating data, teaching the AI, and finding sensors) using a single "One-Click" command. This is the recommended way to run the analysis because it automatically handles the technical steps like **Data Splitting** to ensure your results are accurate.
+
+#### The One-Click Command:
+```bash
+python run_all.py
+```
 
 ---
 
-## 2. Choose Your Path
+## 🔍 4. What is happening under the hood?
 
-What would you like to do today?
+If you prefer to run things step-by-step, or want to understand what the "One-Click" script is doing, here are the stages:
 
-### 🟢 PATH A: Real-World Network Analysis
-*Use this if you have a specific sewer network (like Example 9) and want to find where to put sensors.*
-
-1.  **Prepare your file:** Make sure your `.inp` file is ready. If it's a long simulation (years), trim it to 24-48 hours.
-2.  **Run the Analysis:** Run these commands to start the process:
-    ```bash
-    # 1. Create the data
-    python dataset_generator.py --model_path ./dataset/Examples/Example9.inp --n_scenarios 500
-
-    # 2. Teach the AI
-    python train_models.py --model_path ./dataset/Examples/Example9.inp
-
-    # 3. Find sensor locations
-    python bdn_solver.py --model_path ./dataset/Examples/Example9.inp
-    ```
-3.  **See Results:** Look in the `bdn_output/results/comparison_table.csv`. This file shows the results for **XGBoost, MLP, and GNN** side-by-side so you can pick the best one.
-
-### 🔵 PATH B: Simulation & Experimentation Lab
-*Use this if you want to test the system using a built-in "test network" (Example 8) to see how the AI works.*
-
-1.  **Generate Test Data:**
-    ```bash
-    python dataset_generator.py
-    ```
-2.  **Teach the AI:**
-    ```bash
-    python train_models.py
-    ```
-3.  **Test Sensor Placement:**
-    ```bash
-    python bdn_solver.py
-    ```
+1.  **`dataset_generator.py`**: Runs thousands of tests on your sewer network.
+2.  **`split_data.py`**: Separates your tests into a "Learning Set" and a "Testing Set" (important for accuracy!).
+3.  **`feature_engineering.py`**: Prepares the specific network details for the AI.
+4.  **`train_models.py`**: Teaches the different AI "Brains" (XGBoost, MLP, GNN).
+5.  **`bdn_solver.py`**: Finds the best sensor locations and compares the AI models.
 
 ---
+
+
 
 
 ## 3. Which "AI Brain" Should I Use?
@@ -76,6 +70,31 @@ When you run the analysis, the system uses different "brains" to think. You don'
 *   **XGBoost (The Speedster):** Very fast and good for general networks.
 *   **MLP (The Thinker):** Good at finding complex, hidden patterns.
 *   **GNN (The Architect):** The most advanced; it understands the physical shape of the pipes.
+
+---
+
+## 4. Customizing Your Analysis (Optional)
+
+If you want to change how the system works (for example, to only use one specific AI model), you can edit the **`config/default.yaml`** file.
+
+### How to Turn Models On or Off
+Open `config/default.yaml` and look for the `models` section. Change `enabled: true` to `false` for any model you want to skip:
+
+```yaml
+# Inside config/default.yaml
+ml:
+  models:
+    xgboost:
+      enabled: true   # Change to false to skip XGBoost
+    gnn:
+      enabled: true   # Change to false to skip GNN
+```
+
+### Other Settings You Can Change
+In the same file, you can also change:
+*   **`n_scenarios`**: How many pollution tests to run (default is 100).
+*   **`high_risk_nodes`**: List the names of nodes you think are more likely to be contaminated.
+*   **`exclude_sources`**: List the names of outfalls or tanks where pollution can't start.
 
 ---
 

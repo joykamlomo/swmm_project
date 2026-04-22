@@ -900,14 +900,23 @@ def main(node_features_path, raw_scenarios_path, inp_file, output_dir, skip_gnn)
     all_results = {}
 
     print("\n[4/6] Option A -- Gradient Boosting (XGBoost + LightGBM) ...")
-    all_results.update(train_gradient_boosting(X, y, node_ids, candidate_mask, output_dir))
+    if config.get('ml.models.xgboost.enabled', True) or config.get('ml.models.lightgbm.enabled', True):
+        all_results.update(train_gradient_boosting(X, y, node_ids, candidate_mask, output_dir))
+    else:
+        print("      Option A skipped (disabled in config)")
 
     print("\n[5/6] Option B -- MLP with Dropout ...")
-    all_results.update(train_mlp(X, y, node_ids, candidate_mask, output_dir))
+    if config.get('ml.models.mlp.enabled', True):
+        all_results.update(train_mlp(X, y, node_ids, candidate_mask, output_dir))
+    else:
+        print("      Option B skipped (disabled in config)")
 
     if not skip_gnn and edge_index is not None:
         print("\n[6/6] Option C -- GCN + GAT ...")
-        all_results.update(train_gnn(X, y, node_ids, candidate_mask, edge_index, edge_attr, output_dir))
+        if config.get('ml.models.gnn.enabled', True):
+            all_results.update(train_gnn(X, y, node_ids, candidate_mask, edge_index, edge_attr, output_dir))
+        else:
+            print("      Option C skipped (disabled in config)")
     else:
         print("\n[6/6] Option C -- GNN skipped")
 
