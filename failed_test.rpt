@@ -1,0 +1,8 @@
+
+  EPA STORM WATER MANAGEMENT MODEL - VERSION 5.2 (Build 5.2.4)
+  PYSWMM TOOLKIT API - VERSION v1.0 (2026-02-26)
+  ------------------------------------------------------------
+
+  
+  ERROR 205: invalid keyword 053005 at line 42 of [RAINGAGE] section:
+  RainGage         INTENSITY 0:05   1.0    FILE       ""C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Record.dat""     053005     IN   

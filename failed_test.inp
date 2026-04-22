@@ -39,7 +39,7 @@ MONTHLY      0.0    0.0    0.06   0.11   0.12   0.15   0.16   0.14   0.11   0.07
 ;;               Rain      Time   Snow   Data      
 ;;Name           Type      Intrvl Catch  Source    
 ;;-------------- --------- ------ ------ ----------
-RainGage         INTENSITY 0:05   1.0    FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Record.dat"     053005     IN   
+RainGage         INTENSITY 0:05   1.0    FILE       ""C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Record.dat""     053005     IN   
 
 [SUBCATCHMENTS]
 ;;                                                 Total    Pcnt.             Pcnt.    Curb     Snow    
@@ -74,10 +74,6 @@ S4               4.5        0.2        6.5        7          0
 S5               4.5        0.2        6.5        7          0         
 S6               4.5        0.2        6.5        7          0         
 S7               4.5        0.2        6.5        7          0         
-
-[POLLUTANTS]
-;;Name           Units  Crain      Cgw        Crdii      Kdecay     SnowOnly   Co-Pollut        Co-Fraction      DWF-Concen       Pipe-Exfil
-CONTAM           MG/L   0.0        0.0        0.0        0.0        NO         *                0.0              0.0              0.0
 
 [JUNCTIONS]
 ;;               Invert     Max.       Init.      Surcharge  Ponded    
@@ -173,16 +169,6 @@ SU1                         2.3        39317
 SU1                         6          52644     
 
 [TIMESERIES]
-;; Injection for J4
-F_J4                        0.000       0.0         
-F_J4                        1.030       0.01        
-F_J4                        2.960       0.01        
-F_J4                        2.970       0.0         
-C_J4                        0.000       0.0         
-C_J4                        1.030       4720.782959124927
-C_J4                        2.960       4720.782959124927
-C_J4                        2.970       0.0         
-
 ;;Name           Date       Time       Value     
 ;;-------------- ---------- ---------- ----------
 2-yr                        0:00       0.29      
@@ -498,10 +484,17 @@ RainGage         -148.485           1207.602
 
 
 [BACKDROP]
-FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Site-Post.jpg"
+FILE       ""C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Site-Post.jpg""
 DIMENSIONS 0.000 0.000 1423.000 1475.000
 
-[INFLOWS]
-J4               FLOW   F_J4                DIRECT  1.0  1.0
-J4               CONTAM C_J4                CONCEN  1.0  1.0
+[POLLUTANTS]
+CONTAM MG/L 0 0 0 0 NO * 0 0 0
 
+[TIMESERIES]
+TS1  00:00  1.0
+TS1  01:00  1.0
+TS1  02:00  0.0
+
+[INFLOWS]
+J4 FLOW TS1 DIRECT 1.0 1.0
+J4 CONTAM TS1 CONCEN 1.0 1.0
