@@ -20,6 +20,7 @@ mlflow.db
 mlruns/
 dump/
 scratch/
+tmp/
 
 # Artifacts
 walkthrough.md

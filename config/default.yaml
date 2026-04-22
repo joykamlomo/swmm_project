@@ -3,7 +3,7 @@ environment: development
 
 # Dataset generation settings
 dataset:
-    model_path: "./dataset/Examples/Example9_event.inp"
+    model_path: "./dataset/Examples/Example9.inp"
     n_scenarios: 5000
     output_dir: "./output"
     seed: 42

@@ -851,7 +851,7 @@ def print_summary(metrics_df):
 # SECTION 7 — MAIN
 # ══════════════════════════════════════════════════════════════════════════════
 
-def main(node_features_path, raw_scenarios_path, inp_file, output_dir, skip_gnn):
+def main(node_features_path, raw_scenarios_path, inp_file, output_dir, skip_gnn, exclude_features=None):
 
     # ── Setup output directories ───────────────────────────────────────────────
     for sub in ["models", "priors", "evaluation"]:
@@ -861,6 +861,9 @@ def main(node_features_path, raw_scenarios_path, inp_file, output_dir, skip_gnn)
     print("Hybrid AI Sensor Placement -- ML Training Pipeline")
     print("Mhango & Sambito (2026)")
     print("=" * 60)
+    
+    if exclude_features:
+        print(f"\n[ABLATION STUDY] Excluding features: {exclude_features}")
 
     # ── Load data ──────────────────────────────────────────────────────────────
     print("\n[1/6] Loading data ...")
@@ -873,19 +876,24 @@ def main(node_features_path, raw_scenarios_path, inp_file, output_dir, skip_gnn)
 
     # ── Prepare feature matrix ─────────────────────────────────────────────────
     print("\n[2/6] Preparing feature matrix ...")
-    missing = [c for c in ALL_NODE_FEATURES if c not in node_df.columns]
+    
+    active_features = [f for f in ALL_NODE_FEATURES if f not in (exclude_features or [])]
+    if len(active_features) == 0:
+        raise ValueError("All features were excluded. Cannot train models.")
+        
+    missing = [c for c in active_features if c not in node_df.columns]
     if missing:
         print(f"      WARNING: missing features {missing} — filling with 0")
         for c in missing:
             node_df[c] = 0.0
 
-    X              = node_df[ALL_NODE_FEATURES].values.astype(np.float64)
+    X              = node_df[active_features].values.astype(np.float64)
     y              = node_df[TARGET].values.astype(np.float64)
     node_ids       = node_df["node_id"].values
     candidate_mask = node_df["is_candidate"].values.astype(float)
 
     print(f"      Feature matrix: {X.shape[0]} nodes × {X.shape[1]} features")
-    print(f"      Features: {ALL_NODE_FEATURES}")
+    print(f"      Features used: {active_features}")
 
     # ── Graph structure (for GNN) ──────────────────────────────────────────────
     if not skip_gnn:
@@ -952,6 +960,8 @@ if __name__ == "__main__":
                         help="Directory for all model and prior output files")
     parser.add_argument("--skip_gnn",       action="store_true",
                         help="Skip GNN training (use if torch-geometric is not installed)")
+    parser.add_argument("--exclude_features", nargs='+', default=[],
+                        help="List of features to exclude for ablation studies (e.g. mean_vel_ms prior_contam_prob)")
     args = parser.parse_args()
 
     main(
@@ -960,4 +970,5 @@ if __name__ == "__main__":
         inp_file           = args.model_path,
         output_dir         = args.output_dir,
         skip_gnn           = args.skip_gnn,
+        exclude_features   = args.exclude_features,
     )

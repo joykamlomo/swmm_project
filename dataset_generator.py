@@ -4,6 +4,8 @@ import argparse
 import random
 import yaml
 import uuid
+import time
+import datetime
 import numpy as np
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
@@ -68,9 +70,12 @@ def worker_run_scenario(args):
     (scen_id, base_inp, src, mass_kg, duration_hrs, start_offset_hrs, carrier_flow, node_ids, threshold) = args
     
     unique_id = uuid.uuid4().hex[:8]
-    tmp_inp = f"_scen_{unique_id}.inp"
-    tmp_rpt = f"_scen_{unique_id}.rpt"
-    tmp_out = f"_scen_{unique_id}.out"
+    tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
+    os.makedirs(tmp_dir, exist_ok=True)
+    
+    tmp_inp = os.path.join(tmp_dir, f"_scen_{unique_id}.inp")
+    tmp_rpt = os.path.join(tmp_dir, f"_scen_{unique_id}.rpt")
+    tmp_out = os.path.join(tmp_dir, f"_scen_{unique_id}.out")
     
     try:
         # 1. Build Inp
@@ -99,15 +104,25 @@ def worker_run_scenario(args):
             new_lines.append(line)
         content = '\n'.join(new_lines)
 
-        # Ensure long simulation window to avoid ERROR 191
+        # Optimize simulation window to exactly match injection + wash-out buffer (3 hours)
+        buffer_hrs = 3.0
+        total_sim_hrs = start_offset_hrs + duration_hrs + buffer_hrs
+        
+        start_dt = datetime.datetime(1968, 1, 1, 0, 0, 0)
+        end_dt = start_dt + datetime.timedelta(hours=total_sim_hrs)
+        end_date_str = end_dt.strftime("%m/%d/%Y")
+        end_time_str = end_dt.strftime("%H:%M:%S")
+
         if '[OPTIONS]' in content:
             opt_parts = content.split('[OPTIONS]', 1)
             rest = opt_parts[1].split('[', 1)
             opts = rest[0].split('\n')
             new_opts = []
             for o in opts:
-                if 'START_DATE' in o.upper(): new_opts.append("START_DATE           01/01/1968")
-                elif 'END_DATE' in o.upper():   new_opts.append("END_DATE             01/10/1968")
+                if 'START_DATE' in o.upper():   new_opts.append("START_DATE           01/01/1968")
+                elif 'START_TIME' in o.upper(): new_opts.append("START_TIME           00:00:00")
+                elif 'END_DATE' in o.upper():   new_opts.append(f"END_DATE             {end_date_str}")
+                elif 'END_TIME' in o.upper():   new_opts.append(f"END_TIME             {end_time_str}")
                 else: new_opts.append(o)
             content = opt_parts[0] + '[OPTIONS]' + '\n'.join(new_opts) + (('[' + rest[1]) if len(rest)>1 else '')
 
@@ -219,13 +234,35 @@ def main():
                       config['dataset'].get('threshold', 5.0)))
 
     print(f"Generating {a.n_scenarios} scenarios using {a.workers} workers...")
+    print("Press Ctrl+C to safely cancel and save progress.\n")
     
     all_results = []
-    with ProcessPoolExecutor(max_workers=a.workers) as executor:
-        for idx, res in enumerate(executor.map(worker_run_scenario, tasks)):
-            if res: all_results.extend(res)
-            if (idx + 1) % 100 == 0:
-                print(f"  Progress: {idx+1}/{a.n_scenarios} scenarios complete", end='\r')
+    start_time = time.time()
+    
+    try:
+        with ProcessPoolExecutor(max_workers=a.workers) as executor:
+            for idx, res in enumerate(executor.map(worker_run_scenario, tasks)):
+                if res: all_results.extend(res)
+                
+                # Timer and ETA calculation
+                c = idx + 1
+                if c % max(1, a.n_scenarios // 100) == 0 or c == a.n_scenarios:
+                    elapsed = time.time() - start_time
+                    rate = c / elapsed
+                    rem_sec = (a.n_scenarios - c) / rate if rate > 0 else 0
+                    
+                    el_str = str(datetime.timedelta(seconds=int(elapsed)))
+                    rem_str = str(datetime.timedelta(seconds=int(rem_sec)))
+                    
+                    print(f"  Progress: {c}/{a.n_scenarios} | "
+                          f"Elapsed: {el_str} | ETA: {rem_str} | Rate: {rate:.2f} scen/s", end='\r')
+    except KeyboardInterrupt:
+        print("\n\nProcess cancelled by user. Saving partial results...")
+    
+    print() # Newline after progress bar
+    if not all_results:
+        print("No results generated.")
+        return
 
     df = pd.DataFrame(all_results)
     df.to_csv(os.path.join(a.output_dir, 'raw_scenarios.csv'), index=False)
