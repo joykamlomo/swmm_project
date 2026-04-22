@@ -1,24 +1,24 @@
 [TITLE]
-Example 9
-Continuous Simulation
+Example 3
+Detention Pond
 
 [OPTIONS]
 FLOW_UNITS           CFS
 INFILTRATION         HORTON
 FLOW_ROUTING         DYNWAVE
-START_DATE           01/01/1968
+START_DATE           01/01/2007
 START_TIME           00:00:00
-REPORT_START_DATE    01/01/1968
+REPORT_START_DATE    01/01/2007
 REPORT_START_TIME    00:00:00
-END_DATE             01/02/1968
+END_DATE             01/04/2007
 END_TIME             00:00:00
 SWEEP_START          01/01
 SWEEP_END            12/31
 DRY_DAYS             0
-REPORT_STEP          00:15:00
-WET_STEP             00:15:00
+REPORT_STEP          00:01:00
+WET_STEP             00:01:00
 DRY_STEP             01:00:00
-ROUTING_STEP         0:01:00 
+ROUTING_STEP         0:00:15 
 ALLOW_PONDING        NO
 INERTIAL_DAMPING     PARTIAL
 VARIABLE_STEP        0.75
@@ -33,13 +33,13 @@ MIN_SLOPE            0
 [EVAPORATION]
 ;;Type       Parameters
 ;;---------- ----------
-MONTHLY      0.0    0.0    0.06   0.11   0.12   0.15   0.16   0.14   0.11   0.07   0.03   0.0   
+CONSTANT     0.0
 
 [RAINGAGES]
 ;;               Rain      Time   Snow   Data      
 ;;Name           Type      Intrvl Catch  Source    
 ;;-------------- --------- ------ ------ ----------
-RainGage         INTENSITY 0:05   1.0    FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Record.dat"     053005     IN   
+RainGage         INTENSITY 0:05   1.0    TIMESERIES 10-yr           
 
 [SUBCATCHMENTS]
 ;;                                                 Total    Pcnt.             Pcnt.    Curb     Snow    
@@ -75,10 +75,6 @@ S5               4.5        0.2        6.5        7          0
 S6               4.5        0.2        6.5        7          0         
 S7               4.5        0.2        6.5        7          0         
 
-[POLLUTANTS]
-;;Name           Units  Crain      Cgw        Crdii      Kdecay     SnowOnly   Co-Pollut        Co-Fraction      DWF-Concen       Pipe-Exfil
-CONTAM           MG/L   0.0        0.0        0.0        0.0        NO         *                0.0              0.0              0.0
-
 [JUNCTIONS]
 ;;               Invert     Max.       Init.      Surcharge  Ponded    
 ;;Name           Elev.      Depth      Depth      Depth      Area      
@@ -106,7 +102,7 @@ O2               4954       FREE                        NO
 ;;               Invert   Max.     Init.    Storage    Curve                      Ponded   Evap.   
 ;;Name           Elev.    Depth    Depth    Curve      Params                     Area     Frac.    Infiltration Parameters
 ;;-------------- -------- -------- -------- ---------- -------- -------- -------- -------- -------- -----------------------
-SU1              4956     6        0        TABULAR    SU1                        0        1.0     
+SU1              4956     6        0        TABULAR    SU1                        0        0       
 
 [CONDUITS]
 ;;               Inlet            Outlet                      Manning    Inlet      Outlet     Init.      Max.      
@@ -173,16 +169,6 @@ SU1                         2.3        39317
 SU1                         6          52644     
 
 [TIMESERIES]
-;; Injection for J7
-F_J7                        0.000       0.0         
-F_J7                        2.610       0.01        
-F_J7                        3.160       0.01        
-F_J7                        3.170       0.0         
-C_J7                        0.000       0.0         
-C_J7                        2.610       7070.707070707069
-C_J7                        3.160       7070.707070707069
-C_J7                        3.170       0.0         
-
 ;;Name           Date       Time       Value     
 ;;-------------- ---------- ---------- ----------
 2-yr                        0:00       0.29      
@@ -488,7 +474,7 @@ RainGage         -148.485           1207.602
 
 [LABELS]
 ;;X-Coord          Y-Coord            Label           
-145.274            1129.896           "S1" "" "Arial" 14 0 0
+146.515            1129.971           "S1" "" "Arial" 14 0 0
 684.760            957.456            "S2" "" "Arial" 14 0 0
 243.123            624.503            "S3" "" "Arial" 14 0 0
 655.433            332.953            "S4" "" "Arial" 14 0 0
@@ -498,10 +484,5 @@ RainGage         -148.485           1207.602
 
 
 [BACKDROP]
-FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Site-Post.jpg"
+FILE       "Site-Post.jpg"
 DIMENSIONS 0.000 0.000 1423.000 1475.000
-
-[INFLOWS]
-J7               FLOW   F_J7                DIRECT  1.0  1.0
-J7               CONTAM C_J7                CONCEN  1.0  1.0
-

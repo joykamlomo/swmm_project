@@ -1,22 +1,22 @@
 [TITLE]
-Example 9
-Continuous Simulation
+Example 1
+Post-Development Runoff
 
 [OPTIONS]
 FLOW_UNITS           CFS
 INFILTRATION         HORTON
-FLOW_ROUTING         DYNWAVE
-START_DATE           01/01/1968
+FLOW_ROUTING         KINWAVE
+START_DATE           01/01/2007
 START_TIME           00:00:00
-REPORT_START_DATE    01/01/1968
+REPORT_START_DATE    01/01/2007
 REPORT_START_TIME    00:00:00
-END_DATE             01/02/1968
-END_TIME             00:00:00
+END_DATE             01/01/2007
+END_TIME             12:00:00
 SWEEP_START          01/01
 SWEEP_END            12/31
 DRY_DAYS             0
-REPORT_STEP          00:15:00
-WET_STEP             00:15:00
+REPORT_STEP          00:01:00
+WET_STEP             00:01:00
 DRY_STEP             01:00:00
 ROUTING_STEP         0:01:00 
 ALLOW_PONDING        NO
@@ -33,25 +33,25 @@ MIN_SLOPE            0
 [EVAPORATION]
 ;;Type       Parameters
 ;;---------- ----------
-MONTHLY      0.0    0.0    0.06   0.11   0.12   0.15   0.16   0.14   0.11   0.07   0.03   0.0   
+CONSTANT     0.0
 
 [RAINGAGES]
 ;;               Rain      Time   Snow   Data      
 ;;Name           Type      Intrvl Catch  Source    
 ;;-------------- --------- ------ ------ ----------
-RainGage         INTENSITY 0:05   1.0    FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Record.dat"     053005     IN   
+RainGage         INTENSITY 0:05   1.0    TIMESERIES 2-yr            
 
 [SUBCATCHMENTS]
 ;;                                                 Total    Pcnt.             Pcnt.    Curb     Snow    
 ;;Name           Raingage         Outlet           Area     Imperv   Width    Slope    Length   Pack    
 ;;-------------- ---------------- ---------------- -------- -------- -------- -------- -------- --------
-S1               RainGage         J1               4.55     56.8     1587     2        0                        
-S2               RainGage         J2               4.74     63.0     1653     2        0                        
-S3               RainGage         J3               3.74     39.5     1456     3.1      0                        
-S4               RainGage         J7               6.79     49.9     2331     3.1      0                        
-S5               RainGage         J10              4.79     87.7     1670     2        0                        
-S6               RainGage         J11              1.98     95.0     690      2        0                        
-S7               RainGage         J10              2.33     0.0      907      3.1      0                        
+S1               RainGage         O1               4.55     56.8     1587     2        0                        
+S2               RainGage         O1               4.74     63.0     1653     2        0                        
+S3               RainGage         O1               3.74     39.5     1456     3.1      0                        
+S4               RainGage         O1               6.79     49.9     2331     3.1      0                        
+S5               RainGage         O1               4.79     87.7     1670     2        0                        
+S6               RainGage         O1               1.98     95.0     690      2        0                        
+S7               RainGage         O1               2.33     0.0      907      3.1      0                        
 
 [SUBAREAS]
 ;;Subcatchment   N-Imperv   N-Perv     S-Imperv   S-Perv     PctZero    RouteTo    PctRouted 
@@ -75,114 +75,13 @@ S5               4.5        0.2        6.5        7          0
 S6               4.5        0.2        6.5        7          0         
 S7               4.5        0.2        6.5        7          0         
 
-[POLLUTANTS]
-;;Name           Units  Crain      Cgw        Crdii      Kdecay     SnowOnly   Co-Pollut        Co-Fraction      DWF-Concen       Pipe-Exfil
-CONTAM           MG/L   0.0        0.0        0.0        0.0        NO         *                0.0              0.0              0.0
-
-[JUNCTIONS]
-;;               Invert     Max.       Init.      Surcharge  Ponded    
-;;Name           Elev.      Depth      Depth      Depth      Area      
-;;-------------- ---------- ---------- ---------- ---------- ----------
-J1               4973       0          0          0          0         
-J2               4969       0          0          0          0         
-J3               4973       0          0          0          0         
-J4               4971       0          0          0          0         
-J5               4969.8     0          0          0          0         
-J6               4969       0          0          0          0         
-J7               4971.5     0          0          0          0         
-J8               4966.5     0          0          0          0         
-J9               4964.8     0          0          0          0         
-J10              4963.8     0          0          0          0         
-J11              4963       0          0          0          0         
-J_out            4954       0          0          0          0         
-
 [OUTFALLS]
 ;;               Invert     Outfall    Stage/Table      Tide
 ;;Name           Elev.      Type       Time Series      Gate
 ;;-------------- ---------- ---------- ---------------- ----
-O2               4954       FREE                        NO
-
-[STORAGE]
-;;               Invert   Max.     Init.    Storage    Curve                      Ponded   Evap.   
-;;Name           Elev.    Depth    Depth    Curve      Params                     Area     Frac.    Infiltration Parameters
-;;-------------- -------- -------- -------- ---------- -------- -------- -------- -------- -------- -----------------------
-SU1              4956     6        0        TABULAR    SU1                        0        1.0     
-
-[CONDUITS]
-;;               Inlet            Outlet                      Manning    Inlet      Outlet     Init.      Max.      
-;;Name           Node             Node             Length     N          Offset     Offset     Flow       Flow      
-;;-------------- ---------------- ---------------- ---------- ---------- ---------- ---------- ---------- ----------
-C1               J1               J5               185.00     0.05       0          0          0          0         
-C2               J2               J11              526.00     0.016      0          4          0          0         
-C3               J3               J4               109.00     0.016      0          0          0          0         
-C4               J4               J5               133.00     0.05       0          0          0          0         
-C5               J5               J6               207.00     0.05       0          0          0          0         
-C6               J7               J6               140.00     0.05       0          0          0          0         
-C7               J6               J8               95.00      0.016      0          0          0          0         
-C8               J8               J9               166.00     0.05       0          0          0          0         
-C9               J9               J10              320.00     0.05       0          0          0          0         
-C10              J10              J11              145.00     0.05       0          0          0          0         
-C11              J11              SU1              89.00      0.016      0          1          0          0         
-C_out            J_out            O2               100        0.01       0          0          0          0         
-
-[ORIFICES]
-;;               Inlet            Outlet           Orifice      Crest      Disch.     Flap Open/Close
-;;Name           Node             Node             Type         Height     Coeff.     Gate Time      
-;;-------------- ---------------- ---------------- ------------ ---------- ---------- ---- ----------
-Or1              SU1              J_out            SIDE         0          0.65       NO   0         
-Or2              SU1              J_out            SIDE         1.5        0.65       NO   0         
-Or3              SU1              J_out            SIDE         2.22       0.65       NO   0         
-
-[WEIRS]
-;;               Inlet            Outlet           Weir         Crest      Disch.     Flap End      End       
-;;Name           Node             Node             Type         Height     Coeff.     Gate Con.     Coeff.    
-;;-------------- ---------------- ---------------- ------------ ---------- ---------- ---- -------- ----------
-W1               SU1              J_out            TRANSVERSE   3.17       3.3        NO   0        0         
-
-[XSECTIONS]
-;;Link           Shape        Geom1            Geom2      Geom3      Geom4      Barrels   
-;;-------------- ------------ ---------------- ---------- ---------- ---------- ----------
-C1               TRAPEZOIDAL  3                5          5          5          1                    
-C2               TRAPEZOIDAL  1                0          0.0001     25         1                    
-C3               CIRCULAR     2.25             0          0          0          1                    
-C4               TRAPEZOIDAL  3                5          5          5          1                    
-C5               TRAPEZOIDAL  3                5          5          5          1                    
-C6               TRAPEZOIDAL  3                5          5          5          1                    
-C7               CIRCULAR     3.5              0          0          0          1                    
-C8               TRAPEZOIDAL  3                5          5          5          1                    
-C9               TRAPEZOIDAL  3                5          5          5          1                    
-C10              TRAPEZOIDAL  3                5          5          5          1                    
-C11              CIRCULAR     4.75             0          0          0          1                    
-C_out            CIRCULAR     4.75             0          0          0          1                    
-Or1              RECT_CLOSED  0.3              0.25       0          0
-Or2              RECT_CLOSED  0.5              2          0          0
-Or3              RECT_CLOSED  0.25             0.35       0          0
-W1               RECT_OPEN    2.83             1.75       0          0         
-
-[LOSSES]
-;;Link           Inlet      Outlet     Average    Flap Gate 
-;;-------------- ---------- ---------- ---------- ----------
-
-[CURVES]
-;;Name           Type       X-Value    Y-Value   
-;;-------------- ---------- ---------- ----------
-;WQCV
-SU1              Storage    0          14706     
-SU1                         2.22       19659     
-SU1                         2.3        39317     
-SU1                         6          52644     
+O1               4962       FREE                        NO
 
 [TIMESERIES]
-;; Injection for J7
-F_J7                        0.000       0.0         
-F_J7                        2.610       0.01        
-F_J7                        3.160       0.01        
-F_J7                        3.170       0.0         
-C_J7                        0.000       0.0         
-C_J7                        2.610       7070.707070707069
-C_J7                        3.160       7070.707070707069
-C_J7                        3.170       0.0         
-
 ;;Name           Date       Time       Value     
 ;;-------------- ---------- ---------- ----------
 2-yr                        0:00       0.29      
@@ -268,17 +167,6 @@ NODES ALL
 LINKS ALL
 
 [TAGS]
-Link       C1               Swale           
-Link       C2               Gutter          
-Link       C3               Culvert         
-Link       C4               Swale           
-Link       C5               Swale           
-Link       C6               Swale           
-Link       C7               Culvert         
-Link       C8               Swale           
-Link       C9               Swale           
-Link       C10              Swale           
-Link       C11              Culvert         
 
 [MAP]
 DIMENSIONS 0.000 0.000 1423.000 1475.000
@@ -287,50 +175,11 @@ Units      Feet
 [COORDINATES]
 ;;Node           X-Coord            Y-Coord           
 ;;-------------- ------------------ ------------------
-J1               648.532            1043.713          
-J2               1221.281           1005.760          
-J3               405.287            905.702           
-J4               505.345            862.573           
-J5               631.281            859.123           
-J6               822.772            819.444           
-J7               831.398            709.035           
-J8               915.930            840.146           
-J9               1072.918           867.749           
-J10              1254.058           640.029           
-J11              1333.415           519.269           
-J_out            1557.684           372.632           
-O2               1557.684           293.275           
-SU1              1471.427           458.889           
+O1               1411.468           477.401           
 
 [VERTICES]
 ;;Link           X-Coord            Y-Coord           
 ;;-------------- ------------------ ------------------
-C2               1321.339           774.591           
-C2               1374.819           652.105           
-C2               1366.193           588.275           
-C4               541.573            841.871           
-C5               672.684            850.497           
-C5               712.363            829.795           
-C5               743.415            805.643           
-C5               805.520            812.544           
-C6               791.719            734.912           
-C6               798.620            784.942           
-C8               965.959            838.421           
-C8               995.287            831.520           
-C8               1038.415           850.497           
-C9               1102.246           867.749           
-C9               1131.573           852.222           
-C9               1147.099           829.795           
-C9               1162.626           809.094           
-C9               1198.854           779.766           
-C9               1219.556           757.339           
-C9               1233.357           721.111           
-C9               1238.532           715.936           
-C9               1235.082           674.532           
-C9               1247.158           646.930           
-Or2              1573.211           665.906           
-Or3              1592.187           852.222           
-W1               1438.649           117.310           
 
 [Polygons]
 ;;Subcatchment   X-Coord            Y-Coord           
@@ -386,7 +235,7 @@ S3               304.528            989.317
 S3               354.716            964.900           
 S3               398.123            949.980           
 S3               490.166            922.509           
-S3               472.567            876.374           
+S3               474.292            876.374           
 S3               501.993            816.065           
 S3               556.059            778.895           
 S3               488.476            679.210           
@@ -410,7 +259,7 @@ S4               420.893            729.897
 S4               488.476            680.899           
 S4               556.828            779.067           
 S4               501.213            814.335           
-S4               472.567            879.825           
+S4               474.292            876.374           
 S4               491.718            922.851           
 S4               616.511            898.434           
 S4               668.056            897.078           
@@ -484,24 +333,9 @@ S7               1040.658           937.772
 [SYMBOLS]
 ;;Gage           X-Coord            Y-Coord           
 ;;-------------- ------------------ ------------------
-RainGage         -148.485           1207.602          
-
-[LABELS]
-;;X-Coord          Y-Coord            Label           
-145.274            1129.896           "S1" "" "Arial" 14 0 0
-684.760            957.456            "S2" "" "Arial" 14 0 0
-243.123            624.503            "S3" "" "Arial" 14 0 0
-655.433            332.953            "S4" "" "Arial" 14 0 0
-986.661            125.936            "S5" "" "Arial" 14 0 0
-827.947            56.930             "S6" "" "Arial" 14 0 0
-1050.491           733.187            "S7" "" "Arial" 14 0 0
+RainGage         -50.114            1195.674          
 
 
 [BACKDROP]
-FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Examples\Site-Post.jpg"
+FILE       "Site-Post.JPG"
 DIMENSIONS 0.000 0.000 1423.000 1475.000
-
-[INFLOWS]
-J7               FLOW   F_J7                DIRECT  1.0  1.0
-J7               CONTAM C_J7                CONCEN  1.0  1.0
-

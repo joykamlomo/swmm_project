@@ -1,17 +1,35 @@
-/venv
-\venv
-.venv
+# Python
+venv/
 __pycache__/
 *.pyc
 *.pyo
-.DS_Store
-.idea/
-*.log
-*.sqlite3
-*.env
-.env.*
-*.bak
-*.tmp
-*.pdf
-dataset/Examples
+
+# SWMM Temporary Files
+_*.inp
+_*.rpt
+_*.out
+failed_test.*
+*.rpt
+*.out
+
+# Data & Output (Large files)
+output/
+ml_output/
+bdn_output/
+mlflow.db
+mlruns/
+dump/
+scratch/
+
+# Artifacts
 walkthrough.md
+data_flow_diagram.md
+
+# External data
+Record.dat
+!dataset/Examples/Record.dat
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
