@@ -24,27 +24,30 @@ Requirements:
   pip install pyswmm swmm-toolkit networkx pandas numpy
 """
 
-import os, argparse, random, warnings
+import os, argparse, random, warnings, multiprocessing as mp
 import numpy as np
 import pandas as pd
 import networkx as nx
 from swmm.toolkit.solver import swmm_open, swmm_close, swmm_start, swmm_step, swmm_end
 from swmm.toolkit import solver as slv
+from config import config
+from cache import cached, cache
 
 warnings.filterwarnings('ignore')
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-THRESHOLD       = 5.0        # mg/L
-CARRIER_FLOW    = 0.01       # cfs
+THRESHOLD       = config.get('dataset.threshold', 5.0)        # mg/L
+CARRIER_FLOW    = config.get('dataset.carrier_flow', 0.01)    # cfs
 CFS_TO_M3S      = 0.028317
-MASS_MIN, MASS_MAX          = 0.01, 0.50    # kg
-DURATION_MIN, DURATION_MAX  = 0.25, 3.0    # hours
-START_MIN, START_MAX        = 0.0,  6.0    # hours
-HIGH_RISK_NODES = {'J4', 'J10', 'JI18'}
-EXCLUDE_SOURCE  = {'O1', 'O2', 'Well'}
+MASS_MIN, MASS_MAX = config.get('dataset.mass_range', [0.01, 0.50])    # kg
+DURATION_MIN, DURATION_MAX = config.get('dataset.duration_range', [0.25, 3.0])  # hours
+START_MIN, START_MAX = config.get('dataset.start_range', [0.0, 6.0])    # hours
+HIGH_RISK_NODES = set(config.get('dataset.high_risk_nodes', ['J4', 'J10', 'JI18']))
+EXCLUDE_SOURCE  = set(config.get('dataset.exclude_sources', ['O1', 'O2', 'Well']))
 
 
 # ── 1. Parse network ───────────────────────────────────────────────────────────
+@cached()
 def parse_network(inp_file):
     nodes, outfalls, storage, links = [], [], [], []
     section = None
@@ -262,6 +265,44 @@ def mass_to_conc(mass_kg, dur_hrs):
     return round((mass_kg * 1e6) / max(vol, 1e-9), 2)
 
 
+def run_single_scenario(args):
+    """Run a single scenario (for parallel processing)."""
+    i, src, mass_kg, dur_hrs, start_hr, conc, inp_file, nodes, dist_matrix, topo_depth = args
+
+    tmp_inp = f'_scenario_tmp_{os.getpid()}_{i}.inp'  # Unique temp file per process
+    tmp_inp = os.path.join(os.path.dirname(inp_file), tmp_inp)
+
+    build_scenario_inp(inp_file, tmp_inp, src, conc, dur_hrs, start_hr)
+    res = run_scenario(tmp_inp, nodes)
+
+    try:
+        os.remove(tmp_inp)
+    except:
+        pass
+
+    # Build rows for this scenario
+    rows = []
+    for nid in nodes:
+        r = res[nid]
+        rows.append({
+            'scen_id':       i + 1,
+            'src_node':      src,
+            'mass_kg':       round(mass_kg, 4),
+            'duration_hrs':  round(dur_hrs, 3),
+            'start_hrs':     round(start_hr, 3),
+            'conc_injected': conc,
+            'node_id':       nid,
+            'dist_src':      dist_matrix.get(src, {}).get(nid, 999),
+            'topo_depth':    topo_depth[nid],
+            'peak_conc':     r['peak_conc'],
+            't_peak_min':    r['t_peak_min'],
+            'mean_flow_m3s': r['mean_flow_m3s'],
+            'detected':      r['detected'],
+        })
+
+    return rows
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 def main(inp_file, n_scenarios, output_dir, seed=42):
     random.seed(seed); np.random.seed(seed)
@@ -289,46 +330,83 @@ def main(inp_file, n_scenarios, output_dir, seed=42):
 
     # Scenarios
     src_nodes, src_probs = sampling_weights(candidates)
-    tmp_inp = os.path.join(os.path.dirname(inp_file), '_scenario_tmp.inp')
 
     print(f"\n[3/5] Running {n_scenarios} scenarios...")
-    raw_rows = []
 
-    for i in range(n_scenarios):
-        src      = np.random.choice(src_nodes, p=src_probs)
-        mass_kg  = random.uniform(MASS_MIN, MASS_MAX)
-        dur_hrs  = random.uniform(DURATION_MIN, DURATION_MAX)
-        start_hr = random.uniform(START_MIN, START_MAX)
-        conc     = mass_to_conc(mass_kg, dur_hrs)
+    # Check if parallel processing is enabled
+    parallel_enabled = config.get('dataset.parallel.enabled', False)
+    n_workers = config.get('dataset.parallel.n_workers')
+    chunk_size = config.get('dataset.parallel.chunk_size', 10)
 
-        if (i + 1) % 10 == 0 or i == 0:
-            print(f"  Scenario {i+1:>5}/{n_scenarios}  "
-                  f"src={src:<8} mass={mass_kg:.3f}kg  "
-                  f"dur={dur_hrs:.2f}h  conc={conc:.1f}mg/L")
+    if parallel_enabled and n_scenarios > 1:
+        print(f"      Using parallel processing with {n_workers or 'all'} workers...")
 
-        build_scenario_inp(inp_file, tmp_inp, src, conc, dur_hrs, start_hr)
-        res = run_scenario(tmp_inp, nodes)
+        # Prepare scenario arguments
+        scenario_args = []
+        for i in range(n_scenarios):
+            src = np.random.choice(src_nodes, p=src_probs)
+            mass_kg = random.uniform(MASS_MIN, MASS_MAX)
+            dur_hrs = random.uniform(DURATION_MIN, DURATION_MAX)
+            start_hr = random.uniform(START_MIN, START_MAX)
+            conc = mass_to_conc(mass_kg, dur_hrs)
 
-        for nid in nodes:
-            r = res[nid]
-            raw_rows.append({
-                'scen_id':       i + 1,
-                'src_node':      src,
-                'mass_kg':       round(mass_kg, 4),
-                'duration_hrs':  round(dur_hrs, 3),
-                'start_hrs':     round(start_hr, 3),
-                'conc_injected': conc,
-                'node_id':       nid,
-                'dist_src':      dist_matrix.get(src, {}).get(nid, 999),
-                'topo_depth':    topo_depth[nid],
-                'peak_conc':     r['peak_conc'],
-                't_peak_min':    r['t_peak_min'],
-                'mean_flow_m3s': r['mean_flow_m3s'],
-                'detected':      r['detected'],
-            })
+            scenario_args.append((
+                i, src, mass_kg, dur_hrs, start_hr, conc,
+                inp_file, nodes, dist_matrix, topo_depth
+            ))
 
-    try: os.remove(tmp_inp)
-    except: pass
+        # Run scenarios in parallel
+        with mp.Pool(processes=n_workers) as pool:
+            results = []
+            for i, result in enumerate(pool.imap(run_single_scenario, scenario_args, chunksize=chunk_size)):
+                results.extend(result)
+                if (i + 1) % max(1, n_scenarios // 10) == 0:
+                    print(f"      Completed {i+1}/{n_scenarios} scenarios")
+
+        raw_rows = results
+    else:
+        # Sequential processing (original logic)
+        tmp_inp = os.path.join(os.path.dirname(inp_file), '_scenario_tmp.inp')
+        raw_rows = []
+
+        for i in range(n_scenarios):
+            src = np.random.choice(src_nodes, p=src_probs)
+            mass_kg = random.uniform(MASS_MIN, MASS_MAX)
+            dur_hrs = random.uniform(DURATION_MIN, DURATION_MAX)
+            start_hr = random.uniform(START_MIN, START_MAX)
+            conc = mass_to_conc(mass_kg, dur_hrs)
+
+            if (i + 1) % 10 == 0 or i == 0:
+                print(f"  Scenario {i+1:>5}/{n_scenarios}  "
+                      f"src={src:<8} mass={mass_kg:.3f}kg  "
+                      f"dur={dur_hrs:.2f}h  conc={conc:.1f}mg/L")
+
+            build_scenario_inp(inp_file, tmp_inp, src, conc, dur_hrs, start_hr)
+            res = run_scenario(tmp_inp, nodes)
+
+            for nid in nodes:
+                r = res[nid]
+                raw_rows.append({
+                    'scen_id':       i + 1,
+                    'src_node':      src,
+                    'mass_kg':       round(mass_kg, 4),
+                    'duration_hrs':  round(dur_hrs, 3),
+                    'start_hrs':     round(start_hr, 3),
+                    'conc_injected': conc,
+                    'node_id':       nid,
+                    'dist_src':      dist_matrix.get(src, {}).get(nid, 999),
+                    'topo_depth':    topo_depth[nid],
+                    'peak_conc':     r['peak_conc'],
+                    't_peak_min':    r['t_peak_min'],
+                    'mean_flow_m3s': r['mean_flow_m3s'],
+                    'detected':      r['detected'],
+                })
+
+        try:
+            os.remove(tmp_inp)
+        except:
+            pass
+
     print(f"\n  Done. Total rows: {len(raw_rows):,}")
 
     # Save raw
@@ -378,9 +456,9 @@ def main(inp_file, n_scenarios, output_dir, seed=42):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('--inp',         default='Example8.inp')
-    p.add_argument('--n_scenarios', type=int, default=100)
-    p.add_argument('--output_dir',  default='./output')
-    p.add_argument('--seed',        type=int, default=42)
+    p.add_argument('--model_path',         default='./dataset/Examples/Example8.inp', help='Path to SWMM input file')
+    p.add_argument('--n_scenarios', type=int, default=100, help='Number of scenarios to simulate')
+    p.add_argument('--output_dir',  default='./output', help='Directory for output CSV files')
+    p.add_argument('--seed',        type=int, default=42, help='Random seed for reproducibility')
     a = p.parse_args()
-    main(a.inp, a.n_scenarios, a.output_dir, a.seed)
+    main(a.model_path, a.n_scenarios, a.output_dir, a.seed)

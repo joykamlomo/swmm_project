@@ -56,10 +56,36 @@ import json
 import numpy as np
 import pandas as pd
 
+# MLflow for experiment tracking
+try:
+    import mlflow
+    import mlflow.sklearn
+    import mlflow.pytorch
+    import mlflow.xgboost
+    import mlflow.lightgbm
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    MLFLOW_AVAILABLE = False
+    print("Warning: MLflow not available. Install with: pip install mlflow")
+
+# ONNX export
+try:
+    import onnxruntime
+    import onnxmltools
+    from skl2onnx import convert_sklearn
+    from skl2onnx.common.data_types import FloatTensorType
+    ONNX_AVAILABLE = True
+except ImportError:
+    ONNX_AVAILABLE = False
+    print("Warning: ONNX not available. Install with: pip install onnxruntime onnxmltools skl2onnx")
+
+from config import config
+from cache import cached
+
 warnings.filterwarnings("ignore")
 
 # ── Reproducibility ────────────────────────────────────────────────────────────
-SEED = 42
+SEED = config.get('ml.cv.random_state', 42)
 np.random.seed(SEED)
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -273,47 +299,103 @@ def train_gradient_boosting(X, y, node_ids, candidate_mask, output_dir):
     # ── XGBoost ───────────────────────────────────────────────────────────────
     print("  Training XGBoost ...")
 
-    xgb_params = dict(
-        n_estimators=200,
-        max_depth=3,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        reg_alpha=0.1,
-        reg_lambda=1.0,
-        random_state=SEED,
-        verbosity=0,
-    )
+    xgb_params = config.get('ml.models.xgboost.params', {
+        'n_estimators': 200,
+        'max_depth': 3,
+        'learning_rate': 0.05,
+        'subsample': 0.8,
+        'colsample_bytree': 0.8,
+        'reg_alpha': 0.1,
+        'reg_lambda': 1.0,
+        'random_state': SEED,
+        'verbosity': 0,
+    })
 
     def xgb_fn():
         return xgb.XGBRegressor(**xgb_params)
 
-    xgb_cv = leave_one_out_cv(xgb_fn, X_scaled, y, node_ids)
-    print(f"    LOO MAE={xgb_cv['mae']:.4f}  RMSE={xgb_cv['rmse']:.4f}  "
-          f"R²={xgb_cv['r2']:.4f}  RankCorr={xgb_cv['rank_corr']:.4f}")
+    # MLflow tracking for XGBoost
+    if MLFLOW_AVAILABLE and config.get('ml.tracking.enabled', True):
+        with mlflow.start_run(run_name="XGBoost_Training"):
+            mlflow.log_params(xgb_params)
+            mlflow.log_param("model_type", "XGBoost")
+            mlflow.log_param("cv_type", "Leave-One-Out")
 
-    # Full-data fit for saving and prior extraction
-    xgb_model = xgb.XGBRegressor(**xgb_params)
-    xgb_model.fit(X_scaled, y)
-    model_path = os.path.join(output_dir, "models", "xgb_model.json")
-    xgb_model.save_model(model_path)
-    print(f"    Saved: {model_path}")
+            xgb_cv = leave_one_out_cv(xgb_fn, X_scaled, y, node_ids)
 
-    prior_xgb = normalise_to_prior(xgb_cv["preds"], node_ids, candidate_mask)
-    prior_path = os.path.join(output_dir, "priors", "prior_xgb.csv")
-    prior_xgb.to_csv(prior_path, index=False)
-    print(f"    Prior saved: {prior_path}")
+            # Log metrics
+            mlflow.log_metric("mae", xgb_cv['mae'])
+            mlflow.log_metric("rmse", xgb_cv['rmse'])
+            mlflow.log_metric("r2", xgb_cv['r2'])
+            mlflow.log_metric("rank_corr", xgb_cv['rank_corr'])
 
-    # Feature importance
-    feat_imp_xgb = pd.DataFrame({
-        "feature": ALL_NODE_FEATURES,
-        "importance_xgb": xgb_model.feature_importances_,
-    }).sort_values("importance_xgb", ascending=False)
+            print(f"    LOO MAE={xgb_cv['mae']:.4f}  RMSE={xgb_cv['rmse']:.4f}  "
+                  f"R²={xgb_cv['r2']:.4f}  RankCorr={xgb_cv['rank_corr']:.4f}")
 
-    results["xgb"] = {
-        "model": "XGBoost",
-        **{k: v for k, v in xgb_cv.items() if k != "preds"},
-    }
+            # Full-data fit for saving and prior extraction
+            xgb_model = xgb.XGBRegressor(**xgb_params)
+            xgb_model.fit(X_scaled, y)
+            model_path = os.path.join(output_dir, "models", "xgb_model.json")
+            xgb_model.save_model(model_path)
+            print(f"    Saved: {model_path}")
+
+            # Log model
+            mlflow.xgboost.log_model(xgb_model, "model")
+
+            # ONNX export
+            if ONNX_AVAILABLE:
+                try:
+                    onnx_model = convert_sklearn(xgb_model, initial_types=[('input', FloatTensorType([None, X.shape[1]]))])
+                    onnx_path = os.path.join(output_dir, "models", "xgb_model.onnx")
+                    onnxmltools.utils.save_model(onnx_model, onnx_path)
+                    mlflow.log_artifact(onnx_path, "onnx_model")
+                    print(f"    ONNX exported: {onnx_path}")
+                except Exception as e:
+                    print(f"    ONNX export failed: {e}")
+
+            prior_xgb = normalise_to_prior(xgb_cv["preds"], node_ids, candidate_mask)
+            prior_path = os.path.join(output_dir, "priors", "prior_xgb.csv")
+            prior_xgb.to_csv(prior_path, index=False)
+            print(f"    Prior saved: {prior_path}")
+
+            # Feature importance
+            feat_imp_xgb = pd.DataFrame({
+                "feature": ALL_NODE_FEATURES,
+                "importance_xgb": xgb_model.feature_importances_,
+            }).sort_values("importance_xgb", ascending=False)
+
+            results["xgb"] = {
+                "model": "XGBoost",
+                **{k: v for k, v in xgb_cv.items() if k != "preds"},
+            }
+    else:
+        # Original logic without MLflow
+        xgb_cv = leave_one_out_cv(xgb_fn, X_scaled, y, node_ids)
+        print(f"    LOO MAE={xgb_cv['mae']:.4f}  RMSE={xgb_cv['rmse']:.4f}  "
+              f"R²={xgb_cv['r2']:.4f}  RankCorr={xgb_cv['rank_corr']:.4f}")
+
+        # Full-data fit for saving and prior extraction
+        xgb_model = xgb.XGBRegressor(**xgb_params)
+        xgb_model.fit(X_scaled, y)
+        model_path = os.path.join(output_dir, "models", "xgb_model.json")
+        xgb_model.save_model(model_path)
+        print(f"    Saved: {model_path}")
+
+        prior_xgb = normalise_to_prior(xgb_cv["preds"], node_ids, candidate_mask)
+        prior_path = os.path.join(output_dir, "priors", "prior_xgb.csv")
+        prior_xgb.to_csv(prior_path, index=False)
+        print(f"    Prior saved: {prior_path}")
+
+        # Feature importance
+        feat_imp_xgb = pd.DataFrame({
+            "feature": ALL_NODE_FEATURES,
+            "importance_xgb": xgb_model.feature_importances_,
+        }).sort_values("importance_xgb", ascending=False)
+
+        results["xgb"] = {
+            "model": "XGBoost",
+            **{k: v for k, v in xgb_cv.items() if k != "preds"},
+        }
 
     # ── LightGBM ──────────────────────────────────────────────────────────────
     print("  Training LightGBM ...")
@@ -836,7 +918,7 @@ if __name__ == "__main__":
                         help="Path to node_features.csv from dataset_generator.py")
     parser.add_argument("--raw_scenarios",  default="./output/raw_scenarios.csv",
                         help="Path to raw_scenarios.csv from dataset_generator.py")
-    parser.add_argument("--inp",            default="Example8.inp",
+    parser.add_argument("--model_path",     default="./dataset/Examples/Example8.inp",
                         help="Path to SWMM .inp file (for graph edge extraction)")
     parser.add_argument("--output_dir",     default="./ml_output",
                         help="Directory for all model and prior output files")
@@ -847,7 +929,7 @@ if __name__ == "__main__":
     main(
         node_features_path = args.node_features,
         raw_scenarios_path = args.raw_scenarios,
-        inp_file           = args.inp,
+        inp_file           = args.model_path,
         output_dir         = args.output_dir,
         skip_gnn           = args.skip_gnn,
     )

@@ -330,8 +330,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--node_features", default="./output/node_features.csv")
     parser.add_argument("--raw_scenarios",  default="./output/raw_scenarios.csv")
-    parser.add_argument("--inp",            default="Example8.inp")
+    parser.add_argument("--model_path",     default="./dataset/Examples/Example8.inp")
     parser.add_argument("--output",         default="./output/node_features_full.csv")
     args = parser.parse_args()
 
-    main(args.node_features, args.raw_scenarios, args.inp, args.output)
+    main(args.node_features, args.raw_scenarios, args.model_path, args.output)

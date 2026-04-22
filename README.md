@@ -7,18 +7,156 @@
 
 ---
 
+## Quick Start
+
+### Basic Usage
+
+1. **Install dependencies:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2. **Generate dataset:**
+
+    ```bash
+    python dataset_generator.py
+    ```
+
+3. **Train models:**
+
+    ```bash
+    python train_models.py
+    ```
+
+4. **Run sensor placement:**
+    ```bash
+    python bdn_solver.py
+    ```
+
+### Using Different SWMM Models
+
+Point to any SWMM .inp file:
+
+```bash
+python dataset_generator.py --model_path ./dataset/Examples/Example1.inp
+python feature_engineering.py --model_path ./dataset/Examples/Example1.inp
+python train_models.py --model_path ./dataset/Examples/Example1.inp
+```
+
+---
+
+## How to Use
+
+### Generate Training Data
+
+**Basic run (100 scenarios):**
+
+```bash
+python dataset_generator.py
+```
+
+**Large dataset (5000 scenarios):**
+
+```bash
+python dataset_generator.py --n_scenarios 5000
+```
+
+**Custom SWMM model:**
+
+```bash
+python dataset_generator.py --model_path ./dataset/Examples/Example1.inp
+```
+
+### Train ML Models
+
+**Train all models:**
+
+```bash
+python train_models.py
+```
+
+**Skip GNN training:**
+
+```bash
+python train_models.py --skip_gnn
+```
+
+**Custom model and output location:**
+
+```bash
+python train_models.py --model_path ./dataset/Examples/Example1.inp --output_dir ./my_results
+```
+
+### Run Sensor Placement
+
+**Basic sensor placement:**
+
+```bash
+python bdn_solver.py
+```
+
+**Custom number of sensors:**
+
+```bash
+python bdn_solver.py --n_sensors 5
+```
+
+### View ML Experiments
+
+**Start MLflow UI:**
+
+```bash
+pip install mlflow
+mlflow ui
+```
+
+Then open http://localhost:5000
+
+### Performance Optimization
+
+**Enable parallel processing:**
+
+```bash
+# Edit config/default.yaml
+# Set dataset.parallel.enabled: true
+```
+
+**Enable caching:**
+
+```bash
+# Edit config/default.yaml
+# Set cache.enabled: true
+```
+
+**Use development settings:**
+
+```bash
+export SWMM_ENV=development
+python dataset_generator.py --n_scenarios 30
+```
+
+**Use production settings:**
+
+```bash
+export SWMM_ENV=production
+python dataset_generator.py --n_scenarios 5000
+```
+
 ## Table of Contents
 
-1. [Purpose](#1-purpose)
-2. [System Requirements](#2-system-requirements)
-3. [File Inventory](#3-file-inventory)
-4. [SWMM Network — Example8.inp](#4-swmm-network--example8inp)
-5. [Dataset Generator Pipeline](#5-dataset-generator-pipeline)
-6. [Output Files](#6-output-files)
-7. [Configuration Reference](#7-configuration-reference)
-8. [Known Issues and Fixes](#8-known-issues-and-fixes)
-9. [Extending the Pipeline](#9-extending-the-pipeline)
-10. [Reference](#10-reference)
+1. [Quick Start](#quick-start)
+2. [How to Use](#how-to-use)
+3. [Purpose](#1-purpose)
+4. [System Requirements](#2-system-requirements)
+5. [File Inventory](#3-file-inventory)
+6. [SWMM Network — Example8.inp](#4-swmm-network--example8inp)
+7. [Dataset Generator Pipeline](#5-dataset-generator-pipeline)
+8. [Output Files](#6-output-files)
+9. [Configuration Reference](#7-configuration-reference)
+10. [Known Issues and Fixes](#8-known-issues-and-fixes)
+11. [Extending the Pipeline](#9-extending-the-pipeline)
+12. [Reference](#10-reference)
 
 ---
 
@@ -50,6 +188,12 @@ The scientific basis follows Sambito et al. (2020), who showed that sensor place
 Install the core Python dependencies with:
 
 ```bash
+pip install -r requirements.txt
+```
+
+Or install individually:
+
+```bash
 pip install pyswmm swmm-toolkit networkx pandas numpy xgboost lightgbm scikit-learn torch
 ```
 
@@ -57,6 +201,12 @@ Install optional graph neural network dependencies with:
 
 ```bash
 pip install torch-geometric
+```
+
+Install optional ML operations dependencies with:
+
+```bash
+pip install mlflow onnxruntime onnxmltools skl2onnx joblib pyyaml
 ```
 
 ---
@@ -91,7 +241,150 @@ Runs the Bayesian Decision Network comparison over baseline and ML priors using 
 
 Higher-level pipeline script that orchestrates model comparison and BDN evaluation for the repo.
 
-### `output_sample/raw_scenarios.csv`
+### `model_registry.py`
+
+Utilities for MLflow model registry integration, enabling model versioning, staging, and deployment management.
+
+### `cache.py`
+
+Caching utilities for expensive computations like network parsing and feature engineering.
+
+### `config/`
+
+Configuration files for different environments:
+
+- `default.yaml` - Base configuration
+- `development.yaml` - Development overrides
+- `production.yaml` - Production settings
+
+---
+
+## Quick Start
+
+### Basic Usage
+
+1. **Install dependencies:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+2. **Generate dataset:**
+
+    ```bash
+    python dataset_generator.py
+    ```
+
+3. **Train models:**
+
+    ```bash
+    python train_models.py
+    ```
+
+4. **Run sensor placement:**
+    ```bash
+    python bdn_solver.py
+    ```
+
+### Using Different SWMM Models
+
+Point to any SWMM .inp file:
+
+```bash
+python dataset_generator.py --model_path ./dataset/Examples/Example1.inp
+python feature_engineering.py --model_path ./dataset/Examples/Example1.inp
+python train_models.py --model_path ./dataset/Examples/Example1.inp
+```
+
+---
+
+## Advanced Features
+
+### Performance Optimization
+
+#### Enable Parallel Processing
+
+For faster dataset generation on multi-core systems:
+
+```bash
+# Edit config/default.yaml and set:
+dataset:
+    parallel:
+        enabled: true
+```
+
+#### Enable Caching
+
+Cache expensive computations to speed up repeated runs:
+
+```bash
+# Edit config/default.yaml and set:
+cache:
+    enabled: true
+```
+
+### Environment Configuration
+
+#### Development vs Production
+
+Use different settings for different environments:
+
+**Development (fast iteration):**
+
+```bash
+export SWMM_ENV=development
+python dataset_generator.py --n_scenarios 30
+```
+
+**Production (full scale):**
+
+```bash
+export SWMM_ENV=production
+python dataset_generator.py --n_scenarios 5000
+```
+
+### ML Experiment Tracking
+
+#### View Training Results
+
+```bash
+# Install MLflow
+pip install mlflow
+
+# Start tracking UI
+mlflow ui
+
+# Open http://localhost:5000
+```
+
+#### Enable Tracking
+
+```yaml
+# config/default.yaml
+ml:
+    tracking:
+        enabled: true
+```
+
+### Model Deployment
+
+#### ONNX Export
+
+Models are automatically exported for deployment:
+
+```bash
+ls ml_output/models/
+# xgb_model.onnx  lgbm_model.onnx
+```
+
+#### Model Registry
+
+```python
+from model_registry import model_registry
+model_registry.register_model(model, "my_model", "xgboost")
+```
+
+---
 
 A sample output from a 30-scenario run demonstrating the column schema. Not the full training dataset.
 
@@ -363,12 +656,31 @@ All tunable constants are defined at the top of `dataset_generator.py`:
 
 Command-line arguments:
 
-| Argument        | Default        | Description                     |
-| --------------- | -------------- | ------------------------------- |
-| `--inp`         | `Example8.inp` | Path to SWMM input file         |
-| `--n_scenarios` | `100`          | Number of scenarios to simulate |
-| `--output_dir`  | `./output`     | Directory for output CSV files  |
-| `--seed`        | `42`           | Random seed for reproducibility |
+| Argument        | Default                           | Description                     |
+| --------------- | --------------------------------- | ------------------------------- |
+| `--model_path`  | `./dataset/Examples/Example8.inp` | Path to SWMM input file         |
+| `--n_scenarios` | `100`                             | Number of scenarios to simulate |
+| `--output_dir`  | `./output`                        | Directory for output CSV files  |
+| `--seed`        | `42`                              | Random seed for reproducibility |
+
+### `feature_engineering.py` Arguments
+
+| Argument          | Default                           | Description                    |
+| ----------------- | --------------------------------- | ------------------------------ |
+| `--model_path`    | `./dataset/Examples/Example8.inp` | Path to SWMM input file        |
+| `--node_features` | `./output/node_features.csv`      | Path to base node features     |
+| `--raw_scenarios` | `./output/raw_scenarios.csv`      | Path to raw scenarios          |
+| `--output_dir`    | `./output`                        | Directory for output CSV files |
+
+### `train_models.py` Arguments
+
+| Argument          | Default                           | Description                |
+| ----------------- | --------------------------------- | -------------------------- |
+| `--model_path`    | `./dataset/Examples/Example8.inp` | Path to SWMM input file    |
+| `--node_features` | `./output/node_features_full.csv` | Path to full node features |
+| `--raw_scenarios` | `./output/raw_scenarios.csv`      | Path to raw scenarios      |
+| `--output_dir`    | `./ml_output`                     | Directory for ML outputs   |
+| `--skip_gnn`      | `False`                           | Skip GNN training if True  |
 
 ---
 
