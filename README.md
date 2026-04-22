@@ -1,162 +1,90 @@
-# Technical Documentation
+# Hybrid AI Sensor Placement Guide
 
-## SWMM Example 8 — ML Dataset Generator
-
-**Project:** Hybrid AI Sensor Placement in Urban Drainage Systems
-**Authors:** Mhango, S.B. and Sambito, M. (2026)
+This project helps you find the best places to put water quality sensors in a sewer network. It uses an "Intelligent Assistant" (AI) to learn how pollution moves through pipes and suggests where to place sensors for maximum safety.
 
 ---
 
-## Quick Start
+# 1. Setup (Do this first)
 
-### Basic Usage
+If you haven't set up the software yet, run these commands in your terminal:
 
-1. **Install dependencies:**
+```bash
+# 1. Prepare the workspace
+python -m venv venv
 
+# 2. Activate the environment
+# For Windows (PowerShell):
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser # Only need to do this once
+.\venv\Scripts\activate
+
+# For Mac/Linux:
+source venv/bin/activate
+
+# 3. Install the tools
+pip install -r requirements.txt
+```
+
+> [!TIP]
+> **Windows Error?** If you see an error about "scripts is disabled on this system," run the `Set-ExecutionPolicy` command shown above and try again.
+
+---
+
+## 2. Choose Your Path
+
+What would you like to do today?
+
+### 🟢 PATH A: Real-World Network Analysis
+*Use this if you have a specific sewer network (like Example 9) and want to find where to put sensors.*
+
+1.  **Prepare your file:** Make sure your `.inp` file is ready. If it's a long simulation (years), trim it to 24-48 hours.
+2.  **Run the Analysis:** Run these commands to start the process:
     ```bash
-    pip install -r requirements.txt
+    # 1. Create the data
+    python dataset_generator.py --model_path ./dataset/Examples/Example9.inp --n_scenarios 500
+
+    # 2. Teach the AI
+    python train_models.py --model_path ./dataset/Examples/Example9.inp
+
+    # 3. Find sensor locations
+    python bdn_solver.py --model_path ./dataset/Examples/Example9.inp
     ```
+3.  **See Results:** Look in the `bdn_output/results/comparison_table.csv`. This file shows the results for **XGBoost, MLP, and GNN** side-by-side so you can pick the best one.
 
-2. **Generate dataset:**
+### 🔵 PATH B: Simulation & Experimentation Lab
+*Use this if you want to test the system using a built-in "test network" (Example 8) to see how the AI works.*
 
+1.  **Generate Test Data:**
     ```bash
     python dataset_generator.py
     ```
-
-3. **Train models:**
-
+2.  **Teach the AI:**
     ```bash
     python train_models.py
     ```
-
-4. **Run sensor placement:**
+3.  **Test Sensor Placement:**
     ```bash
     python bdn_solver.py
     ```
 
-### Using Different SWMM Models
+---
 
-Point to any SWMM .inp file:
 
-```bash
-python dataset_generator.py --model_path ./dataset/Examples/Example1.inp
-python feature_engineering.py --model_path ./dataset/Examples/Example1.inp
-python train_models.py --model_path ./dataset/Examples/Example1.inp
-```
+## 3. Which "AI Brain" Should I Use?
+
+When you run the analysis, the system uses different "brains" to think. You don't need to change anything, but here is what they are:
+
+*   **XGBoost (The Speedster):** Very fast and good for general networks.
+*   **MLP (The Thinker):** Good at finding complex, hidden patterns.
+*   **GNN (The Architect):** The most advanced; it understands the physical shape of the pipes.
 
 ---
 
-## How to Use
-
-### Generate Training Data
-
-**Basic run (100 scenarios):**
-
-```bash
-python dataset_generator.py
-```
-
-**Large dataset (5000 scenarios):**
-
-```bash
-python dataset_generator.py --n_scenarios 5000
-```
-
-**Custom SWMM model:**
-
-```bash
-python dataset_generator.py --model_path ./dataset/Examples/Example1.inp
-```
-
-### Train ML Models
-
-**Train all models:**
-
-```bash
-python train_models.py
-```
-
-**Skip GNN training:**
-
-```bash
-python train_models.py --skip_gnn
-```
-
-**Custom model and output location:**
-
-```bash
-python train_models.py --model_path ./dataset/Examples/Example1.inp --output_dir ./my_results
-```
-
-### Run Sensor Placement
-
-**Basic sensor placement:**
-
-```bash
-python bdn_solver.py
-```
-
-**Custom number of sensors:**
-
-```bash
-python bdn_solver.py --n_sensors 5
-```
-
-### View ML Experiments
-
-**Start MLflow UI:**
-
-```bash
-pip install mlflow
-mlflow ui
-```
-
-Then open http://localhost:5000
-
-### Performance Optimization
-
-**Enable parallel processing:**
-
-```bash
-# Edit config/default.yaml
-# Set dataset.parallel.enabled: true
-```
-
-**Enable caching:**
-
-```bash
-# Edit config/default.yaml
-# Set cache.enabled: true
-```
-
-**Use development settings:**
-
-```bash
-export SWMM_ENV=development
-python dataset_generator.py --n_scenarios 30
-```
-
-**Use production settings:**
-
-```bash
-export SWMM_ENV=production
-python dataset_generator.py --n_scenarios 5000
-```
-
-## Table of Contents
-
-1. [Quick Start](#quick-start)
-2. [How to Use](#how-to-use)
-3. [Purpose](#1-purpose)
-4. [System Requirements](#2-system-requirements)
-5. [File Inventory](#3-file-inventory)
-6. [SWMM Network — Example8.inp](#4-swmm-network--example8inp)
-7. [Dataset Generator Pipeline](#5-dataset-generator-pipeline)
-8. [Output Files](#6-output-files)
-9. [Configuration Reference](#7-configuration-reference)
-10. [Known Issues and Fixes](#8-known-issues-and-fixes)
-11. [Extending the Pipeline](#9-extending-the-pipeline)
-12. [Reference](#10-reference)
+## Table of Contents (For Technical Users)
+1. [Purpose](#1-purpose)
+2. [System Requirements](#2-system-requirements)
+3. [File Inventory](#3-file-inventory)
+4. [Dataset Generator Pipeline](#5-dataset-generator-pipeline)
+5. [Configuration Reference](#7-configuration-reference)
 
 ---
 
@@ -256,45 +184,6 @@ Configuration files for different environments:
 - `default.yaml` - Base configuration
 - `development.yaml` - Development overrides
 - `production.yaml` - Production settings
-
----
-
-## Quick Start
-
-### Basic Usage
-
-1. **Install dependencies:**
-
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-2. **Generate dataset:**
-
-    ```bash
-    python dataset_generator.py
-    ```
-
-3. **Train models:**
-
-    ```bash
-    python train_models.py
-    ```
-
-4. **Run sensor placement:**
-    ```bash
-    python bdn_solver.py
-    ```
-
-### Using Different SWMM Models
-
-Point to any SWMM .inp file:
-
-```bash
-python dataset_generator.py --model_path ./dataset/Examples/Example1.inp
-python feature_engineering.py --model_path ./dataset/Examples/Example1.inp
-python train_models.py --model_path ./dataset/Examples/Example1.inp
-```
 
 ---
 
@@ -738,12 +627,14 @@ Units for `Kdecay` are 1/hour in SWMM.
 
 ### Using a different network
 
-Replace `Example8.inp` with any SWMM 5.x input file and update the following in `dataset_generator.py`:
+Replace `Example8.inp` with any SWMM 5.x input file. The system is now robust and will automatically:
+- Inject a `[POLLUTANTS]` section if missing.
+- Append injection `[TIMESERIES]` and `[INFLOWS]` to the correct sections.
+- Handle different network topologies and node names.
 
-- `HIGH_RISK_NODES` — update to reflect your network's high-priority injection candidates
-- `EXCLUDE_SOURCE` — update to match your outfall and storage node names
-- The timeseries anchor string `'Rain_023in' ... '12:00'` — update to match the last line of your rainfall timeseries
-- The inflow anchor string `'J12              FLOW' ... '0.0125'` — update to match the last dry weather flow entry in your `[INFLOWS]` section
+You may still want to update:
+- `HIGH_RISK_NODES` in `dataset_generator.py` to reflect your network's high-priority nodes.
+- `EXCLUDE_SOURCE` in `dataset_generator.py` to match your outfall and storage node names.
 
 ### Parallelisation
 
