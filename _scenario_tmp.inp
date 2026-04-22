@@ -173,15 +173,15 @@ SU1                         2.3        39317
 SU1                         6          52644     
 
 [TIMESERIES]
-;; Injection for J7
-F_J7                        0.000       0.0         
-F_J7                        2.610       0.01        
-F_J7                        3.160       0.01        
-F_J7                        3.170       0.0         
-C_J7                        0.000       0.0         
-C_J7                        2.610       7070.707070707069
-C_J7                        3.160       7070.707070707069
-C_J7                        3.170       0.0         
+;; Injection for J9
+F_J9                        0.000       0.0         
+F_J9                        1.350       0.01        
+F_J9                        3.450       0.01        
+F_J9                        3.460       0.0         
+C_J9                        0.000       0.0         
+C_J9                        1.350       4999.999999999999
+C_J9                        3.450       4999.999999999999
+C_J9                        3.460       0.0         
 
 ;;Name           Date       Time       Value     
 ;;-------------- ---------- ---------- ----------
@@ -502,6 +502,6 @@ FILE       "C:\Users\kamlo\Desktop\Personal\projects\swmm_project\dataset\Exampl
 DIMENSIONS 0.000 0.000 1423.000 1475.000
 
 [INFLOWS]
-J7               FLOW   F_J7                DIRECT  1.0  1.0
-J7               CONTAM C_J7                CONCEN  1.0  1.0
+J9               FLOW   F_J9                DIRECT  1.0  1.0
+J9               CONTAM C_J9                CONCEN  1.0  1.0
 
