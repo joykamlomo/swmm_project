@@ -41,13 +41,16 @@ def build_topology_features(inp_path, high_risk_nodes=None):
             if section == 'CONDUITS' and len(parts) >= 3: G.add_edge(parts[1], parts[2])
             if section == 'OUTFALLS' and len(parts) >= 1: outfalls.append(parts[0])
 
+    # Topology features
     topo_depth = {}
+    betweenness = nx.betweenness_centrality(G)
+    
     nodes = list(G.nodes())
     for node in nodes:
         min_d = 999
         for out in outfalls:
             try:
-                d = nx.shortest_path_length(G, node, out); 
+                d = nx.shortest_path_length(G, node, out)
                 if d < min_d: min_d = d
             except: pass
         topo_depth[node] = min_d if min_d != 999 else 0
@@ -55,10 +58,23 @@ def build_topology_features(inp_path, high_risk_nodes=None):
     rows = []
     for node in nodes:
         n_up = len(nx.ancestors(G, node))
+        # Downstream path count: number of distinct routes to any outfall
+        n_down_paths = 0
+        for out in outfalls:
+            try:
+                paths = list(nx.all_simple_paths(G, node, out))
+                n_down_paths += len(paths)
+            except: pass
+            
         nt = 1 if node.startswith('JI') else (3 if node in outfalls else 0)
         rows.append({
-            'node_id': node, 'topo_depth': topo_depth[node], 'n_upstream': n_up,
-            'node_type_code': nt, 'is_high_risk': 1 if node in high_risk_nodes else 0,
+            'node_id': node, 
+            'topo_depth': topo_depth[node], 
+            'n_upstream_nodes': n_up, # Matched name to train_models.py
+            'betweenness': round(betweenness[node], 6),
+            'downstream_paths': n_down_paths,
+            'node_type_code': nt, 
+            'is_high_risk': 1 if node in high_risk_nodes else 0,
             'prior_contam_prob': 2.0 if node in high_risk_nodes else 1.0
         })
     df = pd.DataFrame(rows).set_index('node_id')
@@ -104,11 +120,10 @@ def worker_run_scenario(args):
             new_lines.append(line)
         content = '\n'.join(new_lines)
 
-        # Optimize simulation window to exactly match injection + wash-out buffer (3 hours)
-        buffer_hrs = 3.0
-        total_sim_hrs = start_offset_hrs + duration_hrs + buffer_hrs
+        # Strictly 12-hour simulation as per concept note
+        total_sim_hrs = 12.0
         
-        start_dt = datetime.datetime(1968, 1, 1, 0, 0, 0)
+        start_dt = datetime.datetime(2020, 1, 1, 0, 0, 0)
         end_dt = start_dt + datetime.timedelta(hours=total_sim_hrs)
         end_date_str = end_dt.strftime("%m/%d/%Y")
         end_time_str = end_dt.strftime("%H:%M:%S")
