@@ -168,11 +168,21 @@ def worker_run_scenario(args):
                     'mean_flow_m3s': round((i_sum[nid] / max(steps, 1)) * CFS_TO_M3S, 6),
                     'detected': 1 if peaks[nid] >= threshold else 0
                 })
-        return results
+        # Results are collected, now return outside the Simulation context
+        pass 
     except Exception as e:
         return None
     finally:
-        if os.path.exists(tmp_inp): os.remove(tmp_inp)
+        # Retry loop for Windows file handle release
+        for _ in range(5):
+            try:
+                if os.path.exists(tmp_inp): 
+                    os.remove(tmp_inp)
+                break
+            except PermissionError:
+                time.sleep(0.1)
+                
+    return results
 
 # ── 4. Main ───────────────────────────────────────────────────────────────────
 def main():

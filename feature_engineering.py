@@ -270,7 +270,6 @@ def main(node_features_path, raw_scenarios_path, inp_file, output_path):
         'peak_conc_std':        grp['peak_conc'].std().round(4),
         'time_to_peak_mean':    grp['t_peak_min'].mean().round(2),
         'mean_flow_m3s':        grp['mean_flow_m3s'].mean().round(6),
-        'mean_vel_ms':         grp['mean_vel_ms'].mean().round(6),
         'n_scenarios_detected': grp['detected'].sum().astype(int),
     }).reset_index()
     
